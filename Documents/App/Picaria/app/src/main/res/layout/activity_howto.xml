@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="nl.davidversluis.picaria.Howto">
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginLeft="8dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginRight="8dp"
+        android:lineSpacingExtra="8sp"
+        android:text="Picaria is a two-player strategy game first played by Native American Indians in what is now the American Southwest. \n  \n Each player has three pieces, and they take turns placing them on the board. If, after placing all pieces, no player has three in a row, the players take turns moving a piece along one line. The first player that gets three in a row wins. \n \n  Checkboxes allow for either one or both of the players to  be controlled by the AI. If both are AI the 'next turn' button has to be pressed to progress gameplay. \n \n The 'Forbid repeated moves' setting forbids participants from reversing their previous move. The AI abides by this."
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+</android.support.constraint.ConstraintLayout>
