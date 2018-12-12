@@ -100,7 +100,7 @@ class Board {
         return checkwin(multi) != 'w';
     }
 
-    void determineAI()
+    void determineAI() //Make AI moves as neccesary for the current game settings
     {
         if(play1AI)
         {
@@ -122,6 +122,7 @@ class Board {
 
     }
 
+    //Get a 2d array of the input array with extra marks where the piece indicated by x,y can be moved
     private int[][] markadjacentempty(int x, int y, int[][] tempmulti, int mark)
     {
         int forbiddenx;
@@ -166,6 +167,7 @@ class Board {
         return tempmulti;
     }
 
+    //Remove temporary marks
     private int[][] resettemp(int[][] multi)
     {
         for(int x=0;x<3;x++)
@@ -183,7 +185,7 @@ class Board {
     }
 
 
-
+    //Make an AI move for the currently active player
     private void makeAImove()
     {
         int playermark = 1 + (player ? 1 : 0); //Calculate mark from current player state
@@ -310,6 +312,7 @@ class Board {
         this.player = !this.player;
     }
 
+    //Check if a certain gamestate is won
     char checkwin(int[][] multi)
     {
         //Check for a full row
