@@ -1,9 +1,6 @@
 package nl.davidversluis.picaria;
 
-import java.util.HashSet;
-import java.util.List;
 import java.util.Random;
-import java.util.Set;
 
 
 class Board {
@@ -11,9 +8,9 @@ class Board {
     boolean player;
     boolean placingphase; //placing or moving
     private int piecesplaced;
-    private boolean play1AI;
-    private boolean play2AI;
-    private boolean forbidrepeat;
+    private final boolean play1AI;
+    private final boolean play2AI;
+    private final boolean forbidrepeat;
     private int selectedx;
     private int selectedy;
     private int player1lastx = 4;
@@ -107,7 +104,6 @@ class Board {
     {
         if(play1AI)
         {
-            assert(!player);
             makeAImove();
 
             changeplayer();
@@ -117,7 +113,6 @@ class Board {
         }
         if(play2AI)
         {
-            assert(player);
             makeAImove();
 
             changeplayer();
@@ -195,11 +190,9 @@ class Board {
         int [][] tempboard = new int [5][5];
         for(int x=0;x<3;x++)
         {
-            for(int y=0;y<3;y++)
-            {
-                tempboard[x][y] = this.multi[x][y];
-            }
+            System.arraycopy(this.multi[x], 0, tempboard[x], 0, 3);
         }
+
         if(placingphase) {
             piecesplaced+=1;
             if (piecesplaced >= 6) {
@@ -241,7 +234,7 @@ class Board {
             }
         }
 
-        else //Moving phase
+        else //Moving phase, check if either you or the opponent can win with a single move
         {
             for (int x = 0; x < 3; x++) {
                 for (int y = 0; y < 3; y++) {
@@ -252,9 +245,10 @@ class Board {
                             for (int i = 0; i < 3; i++) {
                                 if(tempboard[i][n]==playermark+2)
                                 {
+                                    tempboard[x][y] = 0;
                                     for (int p = 1; p < 3; p++) {
                                         tempboard[i][n]=p;
-                                        if (checkwin(tempboard) == 'w') ;
+                                        if (checkwin(tempboard) == 'w')
                                         {
                                             marksquare(i,n,playermark);
                                             marksquare(x,y,0);
@@ -274,6 +268,7 @@ class Board {
                                         }
                                     }
                                     tempboard[i][n]=0;
+                                    tempboard[x][y]=playermark;
                                 }
                             }
                         }
@@ -285,24 +280,22 @@ class Board {
                 Random rand = new Random();
                 int randomx = rand.nextInt(3);
                 int randomy = rand.nextInt(3);
-                tempboard = markadjacentempty(randomx,randomy,tempboard,playermark+2);
-                for (int x = 0; x < 3; x++) {
-                    for (int y = 0; y < 3; y++) {
-                        if(tempboard[x][y]==playermark+2)
-                        {
-                            marksquare(x,y,playermark);
-                            marksquare(randomx,randomy,0);
-                            if(player)
-                            {
-                                player1lastx = x;
-                                player1lasty = y;
+                if(multi[randomx][randomy]==playermark) { //Select a random piece owned by the current player
+                    tempboard = markadjacentempty(randomx, randomy, tempboard, playermark + 2);
+                    for (int x = 0; x < 3; x++) {
+                        for (int y = 0; y < 3; y++) {
+                            if (tempboard[x][y] == playermark + 2) {
+                                marksquare(x, y, playermark);
+                                marksquare(randomx, randomy, 0);
+                                if (player) {
+                                    player1lastx = x;
+                                    player1lasty = y;
+                                } else {
+                                    player2lastx = x;
+                                    player2lasty = y;
+                                }
+                                return;
                             }
-                            else
-                            {
-                                player2lastx = x;
-                                player2lasty = y;
-                            }
-                            return;
                         }
                     }
                 }

@@ -9,13 +9,13 @@ import android.view.Window;
 
 public class Boardscreen extends AppCompatActivity {
 
-    DrawView drawView;
-    Board board;
-    boolean player1AI;
-    boolean player2AI;
-    boolean forbidrepeat;
+    private DrawView drawView;
+    private Board board;
+    private boolean player1AI;
+    private boolean player2AI;
+    private boolean forbidrepeat;
 
-    public void init()
+    private void init()
     {
         //Create an instance of the board class, which manages AI and board positions
         this.board = new Board(3,3,player1AI,player2AI,forbidrepeat);

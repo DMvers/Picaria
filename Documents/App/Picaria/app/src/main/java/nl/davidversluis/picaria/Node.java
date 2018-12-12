@@ -1,14 +1,14 @@
 package nl.davidversluis.picaria;
 
 //Currently unused, might be used when expanding beyond a 3x3 grid
-public class Node {
-    public static int xloc;
-    public static int yloc;
-    public int mark;
+class Node {
+    private static int xloc;
+    private static int yloc;
+    private int mark;
 
     public Node(int xloc,int yloc)
     {
-        this.xloc = xloc;
+        Node.xloc = xloc;
         this.yloc = yloc;
     }
 

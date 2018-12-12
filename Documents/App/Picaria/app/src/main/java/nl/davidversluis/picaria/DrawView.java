@@ -8,38 +8,32 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Rect;
-import android.graphics.drawable.BitmapDrawable;
 import android.os.Build;
-import android.os.SystemClock;
 import android.support.annotation.RequiresApi;
-import android.support.constraint.solver.widgets.Rectangle;
 import android.support.v4.content.ContextCompat;
 import android.view.MotionEvent;
 import android.view.View;
-
-import java.util.concurrent.TimeUnit;
 
 import nl.davidversluis.picaria.Board;
 
 @SuppressLint("ViewConstructor")
 public class DrawView extends View {
-    Paint boardpaint = new Paint();
-    Paint squarepaint = new Paint();
-    Paint transpaint = new Paint();
-    Paint nodepaint = new Paint();
-    Bitmap diamond;
-    Bitmap transdiamond;
-    int width;
-    int firstline;
-    int linewidth = 15;
-    int height;
-    int gapsize;
-    int padding;
-    int smallpadding;
+    private final Paint boardpaint = new Paint();
+    private final Paint squarepaint = new Paint();
+    private final Paint transpaint = new Paint();
+    private final Paint nodepaint = new Paint();
+    private Bitmap diamond;
+    private Bitmap transdiamond;
+    private int width;
+    private int firstline;
+    private final int linewidth = 15;
+    private int height;
+    private int gapsize;
+    private int padding;
+    private int smallpadding;
     char winstate = 'f';
 
-    public Board board;
+    private final Board board;
 
 
     private void init() {

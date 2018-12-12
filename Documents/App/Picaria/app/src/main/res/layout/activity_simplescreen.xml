@@ -7,7 +7,6 @@
     tools:context=".Simplescreen">
 
     <Button
-        android:id="@+id/button5"
         android:layout_width="230dp"
         android:layout_height="71dp"
         android:layout_marginBottom="48dp"
@@ -33,7 +32,8 @@
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        android:focusable="true" />
 
     <CheckBox
         android:id="@+id/checkBox3"
@@ -50,10 +50,10 @@
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/checkBox2" />
+        app:layout_constraintTop_toBottomOf="@+id/checkBox2"
+        android:focusable="true" />
 
     <CheckBox
-        android:id="@+id/checkBox"
         android:layout_width="0dp"
         android:layout_height="39dp"
         android:layout_marginStart="8dp"
@@ -68,6 +68,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.6"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/checkBox3" />
+        app:layout_constraintTop_toBottomOf="@+id/checkBox3"
+        android:focusable="true" />
 
 </android.support.constraint.ConstraintLayout>
