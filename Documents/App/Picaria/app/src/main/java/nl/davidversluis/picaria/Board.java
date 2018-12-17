@@ -1,29 +1,29 @@
 package nl.davidversluis.picaria;
 
-import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;
 
 
 class Board {
-    int [][] multi;
-    boolean player;
+    List boardspace; //List of nodes
+    boolean player; //Diamonds is true/player2, squares is false/player1. player1 has playermark1, player 2 has 2.
     boolean placingphase; //placing or moving
-    private int piecesplaced;
     private final boolean play1AI;
     private final boolean play2AI;
     private final boolean forbidrepeat;
-    private int selectedx;
-    private int selectedy;
-    private int player1lastx = 4;
-    private int player1lasty = 4;
-    private int player2lastx = 4;
-    private int player2lasty = 4;
-    //public Set nodes;
+    private Node selectednode;
 
-    Board(int xsqrs, int ysqrs, boolean play1AI, boolean play2AI, boolean forbidrepeat)
+    private int player1laststart = -1;
+    private int player1lastend = -1;
+    private int player2laststart = -1;
+    private int player2lastend = -1;
+
+    Board(int boardtype, boolean play1AI, boolean play2AI, boolean forbidrepeat, List boardspace)
     {
-        this.multi = new int[xsqrs][ysqrs];
+
+        this.boardspace = boardspace;
+
         this.placingphase = true;
-        this.piecesplaced = 0;
         this.play1AI = play1AI;
         this.play2AI = play2AI;
         this.forbidrepeat = forbidrepeat;
@@ -31,330 +31,440 @@ class Board {
             makeAImove();
             changeplayer();
         }
+    }
 
-        /*
-        this.nodes = new HashSet();
-        for(int x=0;x<3;x++) {
-            for(int y=0;y<3;y++){
-                nodes.add(new Node(x,y));
+    boolean touched(double x, double y) {
+        int playermark = 1 + (player ? 1 : 0); //Calculate mark from current player state
+
+        Node closestnode = null;
+        double shortdist = 1000;
+        for (Object element : this.boardspace) {
+            Node nod = (Node) element;
+            double nodx = nod.xloc;
+            double nody = nod.yloc;
+            double distance = Math.hypot(x - nodx, y - nody);
+            if (distance < shortdist) {
+                shortdist = distance;
+                closestnode = nod;
             }
         }
-        this.xsqrs = ysqrs;
-        this.ysqrs = xsqrs;
-        this.player = true;
-        this.multiplayer = multiplayer;
-        */
-    }
 
-    int reportsquare(int x, int y)
-    {
+        int nodecontent = closestnode.getmark();
 
-        return multi[x][y];
-    }
 
-    private void marksquare(int x, int y, int mark)
-    {
-        multi[x][y] = mark;
-        //if(this.multiplayer)
-    }
-
-    boolean touched(int x, int y) {
-        int playermark = 1 + (player ? 1 : 0); //Calculate mark from current player state
         if (placingphase) {
-            if (reportsquare(x, y) == 0) {
-                marksquare(x, y, playermark);
-                piecesplaced += 1;
-                if (piecesplaced >= 6) {
-                    placingphase = false;
-                }
+            if (nodecontent == 0) {
+                closestnode.setmark(playermark);
                 changeplayer();
             } else
-                return false;
+                return false; //No valid square, AI move not necessary
         } else {
-            int squarecontent = reportsquare(x, y);
-            if (squarecontent == playermark) {
-                multi = resettemp(multi);
-                this.multi = markadjacentempty(x, y, multi, playermark + 2);
-                selectedx = x;
-                selectedy = y;
-                return false;
+
+            if (nodecontent == playermark) {
+                resettemp();
+                List adjacentempties = closestnode.getadjacentempty();
+                for(Object element : adjacentempties) {
+                    Node adj = (Node) element;
+                    int adjid = boardspace.indexOf(adj); //Object-independent id of this particular node
+                    int closid = boardspace.indexOf(closestnode);
+                    if (forbidrepeat) {
+                        if(playermark ==1)
+                        {
+                            if(player1laststart==adjid && player1lastend == closid){ //This move would reverse the last move player 1 did
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            if(player2laststart == adjid && player2lastend == closid){ //Idem for player 2
+                                continue;
+                            }
+                        }
+
+                    }
+                    adj.setmark(playermark + 2);
+                }
+                selectednode = closestnode;
+                return false; //Merely marking squares, no AI move necessary
             }
-            if (squarecontent == playermark + 2) {
-                marksquare(x, y, playermark);
-                marksquare(selectedx, selectedy, 0);
+            if (nodecontent == playermark + 2) {
+                closestnode.setmark(playermark);
+                selectednode.setmark(0); //Previously selected node should be empty, because the token is removed from it
+
+                int adjid = boardspace.indexOf(selectednode);
+                int closid = boardspace.indexOf(closestnode);
+
                 if(player)
                 {
-                    player1lastx = selectedx;
-                    player1lasty = selectedy;
+                    player2lastend = closid;
+                    player2laststart = adjid;
                 }
                 else
                 {
-                    player2lastx = selectedx;
-                    player2lasty = selectedy;
+                    player1lastend = closid;
+                    player1laststart = adjid;
                 }
                 changeplayer();
-            } else
-                return false;
-            multi = resettemp(multi);
+            } else {
+                return false; //No valid move, no AI neccesary
+            }
+            resettemp();
         }
-        return checkwin(multi) != 'w';
+        return !checkwin(boardspace); //If the game has not yet been won, return true
     }
 
-    void determineAI() //Make AI moves as neccesary for the current game settings
+    void determineAI() //Make AI moves as necessary for the current game settings
     {
         if(play1AI)
         {
             makeAImove();
-
             changeplayer();
-            if(checkwin(multi)=='w')
+            if(checkwin(boardspace))
                 return;
 
         }
         if(play2AI)
         {
             makeAImove();
-
             changeplayer();
-            //if(checkwin(multi)=='w')
-                //return;
         }
 
-    }
-
-    //Get a 2d array of the input array with extra marks where the piece indicated by x,y can be moved
-    private int[][] markadjacentempty(int x, int y, int[][] tempmulti, int mark)
-    {
-        int forbiddenx;
-        int forbiddeny;
-        int relevantplayer = tempmulti[x][y];
-        if(relevantplayer == 2)
-        {
-            forbiddenx = player1lastx;
-            forbiddeny = player1lasty;
-        }
-        else
-        {
-            forbiddenx = player2lastx;
-            forbiddeny = player2lasty;
-        }
-        for(int i=-1;i<2;i++)
-        {
-            for(int n=-1;n<2;n++)
-            {
-                if(i==0 && n==0)  
-                {
-                    continue;
-                }
-                int newx = x+i;
-                int newy = y+n;
-                if(newx>=0&&newy>=0&&newx<3&&newy<3) {
-                    if (reportsquare(newx, newy) == 0) {
-                        if(forbidrepeat) {
-                            if ((newx != forbiddenx) || (newy != forbiddeny)) {
-                                tempmulti[newx][newy] = mark;
-                            }
-                        }
-                        else
-                        {
-                            tempmulti[newx][newy] = mark;
-                        }
-                    }
-                }
-
-            }
-        }
-        return tempmulti;
     }
 
     //Remove temporary marks
-    private int[][] resettemp(int[][] multi)
+    private void resettemp()
     {
-        for(int x=0;x<3;x++)
-        {
-            for(int y=0;y<3;y++)
-            {
-                int squarecontent = reportsquare(x,y);
-                if(squarecontent >2)
-                {
-                    multi[x][y] =0;
-                }
+        for(Object element : boardspace) {
+            Node adj = (Node) element;
+            if (adj.getmark() >2) {
+                adj.setmark(0);
             }
         }
-        return multi;
     }
-
 
     //Make an AI move for the currently active player
-    private void makeAImove()
+    void makeAImove()
     {
-        int playermark = 1 + (player ? 1 : 0); //Calculate mark from current player state
-        int [][] tempboard = new int [5][5];
-        for(int x=0;x<3;x++)
-        {
-            System.arraycopy(this.multi[x], 0, tempboard[x], 0, 3);
-        }
+        resettemp();
+        int playermark = 1 + (player ? 1 : 0);
+        List tempboardspace = copyboardspace(boardspace);
+        int bestscore = -2;
+        List bestmove = null; //Will be filled with a new boardspace
+        int tempplayer1lastend = -1;
+        int tempplayer1laststart = -1;
+        int tempplayer2lastend = -1;
+        int tempplayer2laststart = -1;
 
         if(placingphase) {
-            piecesplaced+=1;
-            if (piecesplaced >= 6) {
-                placingphase = false;
+            for (Object element : tempboardspace) {
+                Node adj = (Node) element;
+                if (adj.getmark() == 0) {
+                    adj.setmark(playermark);
+                    if (checkwin(tempboardspace)) {
+                        bestmove = tempboardspace;
+                        this.boardspace = copyboardspace(bestmove); //A single move will win, no need to run the minimax
+                        return;
+                    }
+                    adj.setmark(0);//Revert change
+                }
             }
-            //check if either you or the opponent can win with a single move
-            for (int x = 0; x < 3; x++) {
-                for (int y = 0; y < 3; y++) {
-                    if (tempboard[x][y] == 0) {
-                        for (int i = 1; i < 3; i++) {
-                            tempboard[x][y] = i;
-                            if (checkwin(tempboard) == 'w') {
-                                multi[x][y] = playermark;
-                                //changeplayer();
-                                return;
-                            }
-                            tempboard[x][y] = 0;
-
+            for (Object element : tempboardspace) {
+                Node adj = (Node) element;
+                if(adj.getmark()==0){
+                    adj.setmark(playermark);
+                        int score = -1*minimaxer(copyboardspace(tempboardspace),0,5,!player);
+                        if(score>bestscore){
+                            bestscore = score;
+                            bestmove = copyboardspace(tempboardspace);
                         }
+
+                    adj.setmark(0);//Revert change
+                }
+            }
+        }
+        else {
+            for (Object element : tempboardspace) {
+                Node nod = (Node) element;
+                if (nod.getmark() == playermark) {
+                    for (Object secondelement : nod.getadjacentempty()) {
+                        Node secondlocation = (Node) secondelement;
+
+
+                        int secondlocid = tempboardspace.indexOf(secondlocation);
+                        int nodid = tempboardspace.indexOf(nod);
+
+                        if (forbidrepeat) {
+
+                            if(playermark == 1)
+                            {
+                                if(player1laststart==secondlocid && player1lastend == nodid){
+                                    continue;
+                                }
+                            }
+                            else
+                            {
+                                if(player2laststart == secondlocid && player2lastend == nodid){
+                                    continue;
+                                }
+                            }
+                        }
+
+                        secondlocation.setmark(playermark);
+                        nod.setmark(0);
+                        if (checkwin(tempboardspace)) {
+                            bestmove = tempboardspace;
+                            this.boardspace = copyboardspace(bestmove); //A single move will win, no need to run the minimax
+                            if(playermark == 1)
+                            {
+                                player1lastend = secondlocid;
+                                player1laststart = nodid;
+
+                            }
+                            else
+                            {
+                                player2lastend = secondlocid;
+                                player2laststart = nodid;
+                            }
+                            return;
+                        }
+                        secondlocation.setmark(0);
+                        nod.setmark(playermark);
                     }
                 }
             }
-            //If neither can win in a single move, place randomly
-            boolean unplaced = true;
-            while (unplaced) {
-                Random rand = new Random();
-                int randomx = rand.nextInt(3);
-                int randomy = rand.nextInt(3);
-                if (multi[randomx][randomy] == 0) {
-                    int mark;
-                    if (!player) {
-                        mark = 1;
-                    } else {
-                        mark = 2;
+            for (Object element : tempboardspace) {
+                Node nod = (Node) element;
+                if (nod.getmark() == playermark) {
+                    for (Object secondelement : nod.getadjacentempty()) {
+                        Node secondlocation = (Node) secondelement;
+                        int secondlocid = tempboardspace.indexOf(secondlocation);
+                        int nodid = tempboardspace.indexOf(nod);
+
+                        if (forbidrepeat) {
+                            if(playermark == 1)
+                            {
+                                if(player1laststart==secondlocid && player1lastend == nodid){
+                                    continue;
+                                }
+                            }
+                            else
+                            {
+                                if(player2laststart == secondlocid && player2lastend == nodid){
+                                    continue;
+                                }
+                            }
+                        }
+
+                        secondlocation.setmark(playermark);
+                        nod.setmark(0);
+                        int score = -1 * minimaxer(copyboardspace(tempboardspace), 0, 4, !player);
+                        if (score > bestscore) {
+                            bestscore = score;
+                            bestmove = copyboardspace(tempboardspace);
+                            if(playermark == 1)
+                            {
+                                tempplayer1lastend = secondlocid;
+                                tempplayer1laststart = nodid;
+
+                            }
+                            else
+                            {
+                                tempplayer2lastend = secondlocid;
+                                tempplayer2laststart = nodid;
+                            }
+                        }
+                        secondlocation.setmark(0);
+                        nod.setmark(playermark);
                     }
-                    multi[randomx][randomy] = mark;
-                    unplaced = false;
                 }
             }
         }
 
-        else //Moving phase, check if either you or the opponent can win with a single move
+        if(playermark == 1)
         {
-            for (int x = 0; x < 3; x++) {
-                for (int y = 0; y < 3; y++) {
-                    if(multi[x][y]==playermark)
-                    {
-                        tempboard = markadjacentempty(x,y,tempboard,playermark+2);
-                        for (int n = 0; n < 3; n++) {
-                            for (int i = 0; i < 3; i++) {
-                                if(tempboard[i][n]==playermark+2)
-                                {
-                                    tempboard[x][y] = 0;
-                                    for (int p = 1; p < 3; p++) {
-                                        tempboard[i][n]=p;
-                                        if (checkwin(tempboard) == 'w')
-                                        {
-                                            marksquare(i,n,playermark);
-                                            marksquare(x,y,0);
-                                            multi=resettemp(multi);
-                                            if(player)
-                                            {
-                                                player1lastx = x;
-                                                player1lasty = y;
-                                            }
-                                            else
-                                            {
-                                                player2lastx = x;
-                                                player2lasty = y;
-                                            }
-                                            return;
+            player1lastend = tempplayer1lastend ;
+            player1laststart = tempplayer1laststart;
 
-                                        }
-                                    }
-                                    tempboard[i][n]=0;
-                                    tempboard[x][y]=playermark;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            //If neither can win in a single move, play randomly
-            while (true) {
-                Random rand = new Random();
-                int randomx = rand.nextInt(3);
-                int randomy = rand.nextInt(3);
-                if(multi[randomx][randomy]==playermark) { //Select a random piece owned by the current player
-                    tempboard = markadjacentempty(randomx, randomy, tempboard, playermark + 2);
-                    for (int x = 0; x < 3; x++) {
-                        for (int y = 0; y < 3; y++) {
-                            if (tempboard[x][y] == playermark + 2) {
-                                marksquare(x, y, playermark);
-                                marksquare(randomx, randomy, 0);
-                                if (player) {
-                                    player1lastx = x;
-                                    player1lasty = y;
-                                } else {
-                                    player2lastx = x;
-                                    player2lasty = y;
-                                }
-                                return;
-                            }
-                        }
-                    }
-                }
-            }
         }
+        else
+        {
+            player2lastend = tempplayer2lastend;
+            player2laststart = tempplayer2laststart;
+        }
+        this.boardspace = copyboardspace(bestmove);
     }
 
-
-    private void changeplayer()
+    //TODO easy and hard AI (change depth)
+    private int minimaxer(List boardspace, int depth, int maxdepth, boolean player)
     {
+        //determine if we're in placingphase or movingphase
+        if(depth == maxdepth)
+        {
+            return 0;
+        }
+        depth +=1;
 
+        int pieces = 0;
+
+        for(Object element: boardspace){
+            Node nod = (Node) element;
+            if(nod.getmark()>0)
+            {pieces++;
+            }
+        }
+
+        int playermark = 1 + (player ? 1 : 0);
+        int bestscore = -2; //Even a losing move (score -1) should be better than no move at all
+        List tempboardspace = copyboardspace(boardspace);
+        if(pieces<6)//Should place a piece
+        {
+            for (Object element : tempboardspace) {
+                Node adj = (Node) element;
+                if (adj.getmark() == 0) {
+                    adj.setmark(playermark);
+                    if (checkwin(tempboardspace)) {
+                        return 1;
+                    }
+                    adj.setmark(0);//Revert change
+                }
+            }
+            for (Object element : tempboardspace) {
+                Node adj = (Node) element;
+                if(adj.getmark()==0){
+                    adj.setmark(playermark);
+                    int score = -1*minimaxer(copyboardspace(tempboardspace),depth,maxdepth,!player);
+                    if(score>bestscore){
+                        bestscore = score;
+                    }
+
+                    adj.setmark(0);//Revert change
+                }
+
+            }
+        }
+        else //Movingphase
+            {
+            for (Object element : tempboardspace) {
+                Node nod = (Node) element;
+                if (nod.getmark() == playermark) {
+                    for (Object secondelement : nod.getadjacentempty()) {
+                        Node adj = (Node) secondelement;
+                        adj.setmark(playermark);
+                        nod.setmark(0);
+                        if (checkwin(tempboardspace)) {
+                            return 1; //Win for the opponent if this is minimax depth 0
+                        }
+                        adj.setmark(0);
+                        nod.setmark(playermark);
+
+                    }
+                }
+            }
+            for (Object element : tempboardspace) {
+                Node nod = (Node) element;
+                if(nod.getmark()==playermark){
+                    for(Object secondelement: nod.getadjacentempty()) {
+                        Node adj = (Node) secondelement;
+                        adj.setmark(playermark);
+                        nod.setmark(0);
+                        int score = -1 * minimaxer(copyboardspace(tempboardspace), depth, maxdepth, !player);
+                        if (score > bestscore) {
+                            bestscore = score;
+                        }
+
+                        adj.setmark(0);
+                        nod.setmark(playermark);
+                        }
+                    }
+                }
+            }
+
+        return bestscore;
+    }
+
+    void changeplayer()
+    {
+        int piecesplaced = 0;
+        for(Object element: boardspace){
+            Node nod = (Node) element;
+            if(nod.getmark()>0)
+            {piecesplaced++;
+            }
+        }
+        if(piecesplaced >5){placingphase=false;}
         this.player = !this.player;
     }
 
-    //Check if a certain gamestate is won
-    char checkwin(int[][] multi)
+    private List copyboardspace(List anyboardspace)
     {
-        //Check for a full row
-        for(int x=0;x<3;x++)
+        List<Node> newlist = new ArrayList<>();
+        for(Object element:anyboardspace){
+            newlist.add(new Node((Node)element));
+        }
+        for(int n=0;n<9;n=n+3) {
+            for(int i=0;i<3;i++) {
+                int index = n+i;
+                boolean left = (n==0);
+                boolean right = (n==6);
+                boolean bottom = (i==2);
+                boolean top = (i==0);
+                if(!top){newlist.get(index).setadjacent(newlist.get(index-1));}
+                if(!bottom){newlist.get(index).setadjacent(newlist.get(index+1));}
+                if(!right){newlist.get(index).setadjacent(newlist.get(index+3));}
+                if(!left){newlist.get(index).setadjacent(newlist.get(index-3));}
+                if(!right && !bottom){newlist.get(index).setadjacent(newlist.get(index+4));}
+                if(!left && !bottom){newlist.get(index).setadjacent(newlist.get(index-2));}
+                if(!right && !top){newlist.get(index).setadjacent(newlist.get(index+2));}
+                if(!left && !top){newlist.get(index).setadjacent(newlist.get(index-4));}
+            }
+        }
+        return newlist;
+    }
+
+    //Check if a certain gamestate is won
+    boolean checkwin(List boardspace)
+    {
+        List<Node> play1list = new ArrayList<>();
+        List<Node> play2list = new ArrayList<>();
+        for(Object element : boardspace) {
+            Node adj = (Node) element;
+            int mark = adj.getmark();
+            if (mark ==1) {
+                play1list.add(adj);
+            }
+            if(mark==2){
+                play2list.add(adj);
+            }
+        }
+        return(checkforstraightline(play1list) || checkforstraightline(play2list));
+    }
+
+    private boolean checkforstraightline(List nodelist)
+    {
+        if (nodelist.size()<3)
         {
-            if((multi[x][1]==multi[x][2]) && (multi[x][2]==multi[x][0])) {
-                if(multi[x][1]==1||multi[x][1]==2) {
-                    return 'w';
-                }
-            }
+            return false; //Can't win with less than three tokens
         }
-        //Check for a full column
-        for(int y=0;y<3;y++)
-        {
-            if((multi[1][y]==multi[2][y]) && (multi[2][y]==multi[0][y])) {
-                if(multi[1][y]==1||multi[1][y]==2) {
-                    return 'w';
-                }
-            }
+        //If the tokens are in a straight line, and only then, one of the nodes will be in the average location of all three.
+        double totx = 0;
+        double toty = 0;
+
+        for(Object element : nodelist) {
+            Node nod = (Node) element;
+            totx += nod.xloc;
+            toty += nod.yloc;
         }
-        //First diagonal
-        if((multi[2][2]==multi[1][1]) && (multi[1][1]==multi[0][0])) {
-            if(multi[1][1]==1||multi[1][1]==2) {
-                return 'w';
-            }
-        }
-        //Second diagonal
-        if((multi[2][0]==multi[1][1]) && (multi[1][1]==multi[0][2])) {
-            if(multi[1][1]==1||multi[1][1]==2) {
-                return 'w';
-            }
-        }
-        for(int x=0;x<3;x++)
-        {
-            for(int y=0;y<3;y++)
+
+        double avgx = totx/3;
+        double avgy = toty/3;
+
+        for(Object element : nodelist) {
+            Node nod = (Node) element;
+            if(nod.xloc == avgx && nod.yloc == avgy) //Rounding errors may occur, but only when the tokens aren't in a straight line anyway
             {
-                if(multi[x][y] == 0||multi[x][y]>2)
-                {
-                    return 'f';
-                }
+                return true;
             }
         }
-        return 't';
+        return false;
     }
 }

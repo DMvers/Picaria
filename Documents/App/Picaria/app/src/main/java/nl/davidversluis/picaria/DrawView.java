@@ -8,11 +8,11 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.os.Build;
-import android.support.annotation.RequiresApi;
 import android.support.v4.content.ContextCompat;
 import android.view.MotionEvent;
 import android.view.View;
+
+import java.util.List;
 
 import nl.davidversluis.picaria.Board;
 
@@ -26,14 +26,14 @@ public class DrawView extends View {
     private Bitmap transdiamond;
     private int width;
     private int firstline;
-    private final int linewidth = 15;
     private int height;
     private int gapsize;
     private int padding;
     private int smallpadding;
-    char winstate = 'f';
+    boolean winstate = false;
 
     private final Board board;
+    private List boardspace;
 
 
     private void init() {
@@ -45,6 +45,7 @@ public class DrawView extends View {
 
         squarepaint.setColor(ContextCompat.getColor(getContext(),R.color.customblue));
         squarepaint.setStyle(Paint.Style.FILL);
+        int linewidth = 15;
         squarepaint.setStrokeWidth(linewidth);
 
         transpaint.setColor(ContextCompat.getColor(getContext(),R.color.translucentblue));
@@ -56,9 +57,10 @@ public class DrawView extends View {
         nodepaint.setStrokeWidth(linewidth);
     }
 
-    public DrawView(Context context,Board newboard) {
+    public DrawView(Context context,Board newboard,List boardspace) {
         super(context);
         board = newboard;
+        this.boardspace = boardspace;
         width = Resources.getSystem().getDisplayMetrics().widthPixels;
         height = Resources.getSystem().getDisplayMetrics().heightPixels;
         firstline = height / 6;
@@ -69,7 +71,6 @@ public class DrawView extends View {
 
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
 
@@ -94,79 +95,83 @@ public class DrawView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event){
-        if(winstate == 't' || winstate == 'w') //game ended
+        if(winstate) //game ended
             return super.onTouchEvent(event);
-        int locx = (int)event.getX();
-        int locy = (int)event.getY();
-        if (locy > (firstline + 2 * gapsize + padding)|| locy < (firstline-padding)) //Below the bottom of the board, i.e. out of bounds
+        double locx = event.getX();
+        double locy = event.getY();
+        if (locy > (firstline + 2 * gapsize + padding)|| locy < (firstline-padding)) //Below the bottom of the board or above it, i.e. out of bounds
         {
             return super.onTouchEvent(event);
         }
-        int halfgap = gapsize/2;
-        int xintervals = (locx - padding)/halfgap;
-        int yintervals = (locy - firstline)/halfgap;
-        int boardx = xintervals/2 +xintervals%2;
-        int boardy = yintervals/2 + yintervals%2;
+        double xpart = locx /(double)width;
+        double ypart = (locy - (double)firstline) / (double)(gapsize*2 );
         boolean needAI;
-        needAI = board.touched(boardx,boardy); //This also changes the board itself, if the move is valid
-        winstate = board.checkwin(board.multi);
+        needAI = board.touched(xpart,ypart); //This also changes the board itself, if the move is valid
+        winstate = board.checkwin(boardspace);
         invalidate();
         if(needAI) {
             board.determineAI();
         }
-        winstate = board.checkwin(board.multi);
+        winstate = board.checkwin(boardspace);
         invalidate();
         return super.onTouchEvent(event);
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     public void onDraw(Canvas canvas) {
+        this.boardspace = board.boardspace;
         //Draw grid
-        for(int i=0;i<3;i++) {
+        for (int i = 0; i < 3; i++) {
             canvas.drawLine(padding + gapsize * i, firstline, padding + gapsize * i, firstline + 2 * gapsize, boardpaint);
-            canvas.drawLine(padding, firstline + gapsize * i, padding+2*gapsize, firstline + gapsize * i, boardpaint);
+            canvas.drawLine(padding, firstline + gapsize * i, padding + 2 * gapsize, firstline + gapsize * i, boardpaint);
         }
         //Draw major diagonals
         canvas.drawLine(padding, firstline, padding + gapsize * 2, firstline + 2 * gapsize, boardpaint);
-        canvas.drawLine(padding+ gapsize * 2, firstline, padding , firstline + 2 * gapsize, boardpaint);
+        canvas.drawLine(padding + gapsize * 2, firstline, padding, firstline + 2 * gapsize, boardpaint);
 
         //Draw smaller diagononals
-        canvas.drawLine(padding+ gapsize, firstline, padding , firstline + gapsize, boardpaint);
-        canvas.drawLine(padding+ gapsize, firstline, padding + 2*gapsize, firstline + gapsize, boardpaint);
-        canvas.drawLine(padding+ 2*gapsize, firstline + gapsize, padding +gapsize, firstline + 2*gapsize, boardpaint);
-        canvas.drawLine(padding, firstline + gapsize, padding + gapsize, firstline + 2*gapsize, boardpaint);
+        canvas.drawLine(padding + gapsize, firstline, padding, firstline + gapsize, boardpaint);
+        canvas.drawLine(padding + gapsize, firstline, padding + 2 * gapsize, firstline + gapsize, boardpaint);
+        canvas.drawLine(padding + 2 * gapsize, firstline + gapsize, padding + gapsize, firstline + 2 * gapsize, boardpaint);
+        canvas.drawLine(padding, firstline + gapsize, padding + gapsize, firstline + 2 * gapsize, boardpaint);
 
-
-        for(int x=0;x<3;x++)
-        {
-            for(int y=0;y<3;y++)
-            {
+        for (int x = 0; x < 3; x++) {
+            for (int y = 0; y < 3; y++) {
                 //always draw circles on intersections
-                canvas.drawOval(padding/2 + gapsize * x, firstline - padding/2 + gapsize * y, padding + padding/2 + gapsize * x, firstline +padding/2 + gapsize * y, nodepaint);
-
-                int squarecontent = board.reportsquare(x,y);
-                //Draw over the circle with other shapes, which might be transparent
-                switch(squarecontent){
-                            //Filled diamond
-                    case 1: canvas.drawBitmap(diamond,padding/2 + gapsize*x-2*smallpadding,firstline - padding/2 + gapsize *y-2*smallpadding,nodepaint);
-                            break;
-                            //Filled square
-                    case 2: canvas.drawRect(padding/2 + gapsize*x-smallpadding,firstline - padding/2 + gapsize *y-smallpadding, padding + padding/2 + gapsize*x+smallpadding,firstline+padding/2 + gapsize*y+smallpadding,squarepaint);
-                            break;
-                            //Translucent diamond (potential move)
-                    case 3: canvas.drawBitmap(transdiamond,padding/2 + gapsize*x-2*smallpadding,firstline - padding/2 + gapsize *y-2*smallpadding,transpaint);
-                            break;
-                            //Translucent square (potential move)
-                    case 4: canvas.drawRect(padding/2 + gapsize*x-smallpadding,firstline - padding/2 + gapsize *y-smallpadding, padding + padding/2 + gapsize*x+smallpadding,firstline+padding/2 + gapsize*y+smallpadding,transpaint);
-                }
+                canvas.drawOval(padding / 2 + gapsize * x, firstline - padding / 2 + gapsize * y, padding + padding / 2 + gapsize * x, firstline + padding / 2 + gapsize * y, nodepaint);
             }
+        }
+
+        //Draw the right token on each node
+        for (Object element : boardspace) {
+            Node nod = (Node) element;
+            int token = nod.getmark();
+            double x = nod.xloc*2;
+            double y = nod.yloc*2;
+            switch (token) {
+                //Filled diamond
+                case 1:
+                    canvas.drawBitmap(diamond,(int)(padding / 2 + gapsize * x - 2 * smallpadding),(int)(firstline - padding / 2 + gapsize * y - 2 * smallpadding), nodepaint);
+                    break;
+                //Filled square
+                case 2:
+                    canvas.drawRect((int)(padding / 2 + gapsize * x - smallpadding), (int)(firstline - padding / 2 + gapsize * y - smallpadding), (int)(padding + padding / 2 + gapsize * x + smallpadding),(int)( firstline + padding / 2 + gapsize * y + smallpadding), squarepaint);
+                    break;
+                //Translucent diamond (potential move)
+                case 3:
+                    canvas.drawBitmap(transdiamond, (int)(padding / 2 + gapsize * x - 2 * smallpadding),(int)( firstline - padding / 2 + gapsize * y - 2 * smallpadding), transpaint);
+                    break;
+                //Translucent square (potential move)
+                case 4:
+                    canvas.drawRect((int)(padding / 2 + gapsize * x - smallpadding),(int)( firstline - padding / 2 + gapsize * y - smallpadding),(int)( padding + padding / 2 + gapsize * x + smallpadding),(int)( firstline + padding / 2 + gapsize * y + smallpadding), transpaint);
+            }
+
         }
 
         boolean playersturn = board.player;
         boolean phase = board.placingphase;
-        if(winstate == 'w')
+        if(winstate)
         {
             if(playersturn)
                 canvas.drawText("Diamonds have won",padding/2,padding*2,boardpaint);

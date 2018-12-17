@@ -19,6 +19,7 @@ public class Simplescreen extends AppCompatActivity {
         intent.putExtra("P1AI",player1AI);
         intent.putExtra("P2AI",player2AI);
         intent.putExtra("Forbidrepeat",forbidrepeat);
+        intent.putExtra("Boardtype",1);
         startActivity(intent);
     }
     public void checkbox1click(View view)

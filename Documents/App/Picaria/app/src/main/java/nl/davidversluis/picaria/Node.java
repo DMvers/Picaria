@@ -1,24 +1,53 @@
 package nl.davidversluis.picaria;
 
-//Currently unused, might be used when expanding beyond a 3x3 grid
-class Node {
-    private static int xloc;
-    private static int yloc;
-    private int mark;
+import java.util.ArrayList;
+import java.util.List;
 
-    public Node(int xloc,int yloc)
+
+class Node {
+    final double xloc; //Between 0 and 1, indicates relative gameboard position, same for y
+    final double yloc;
+    private int mark;
+    private final List<Node> adjacents;
+
+    Node(double xloc, double yloc)
     {
-        Node.xloc = xloc;
+        this.xloc = xloc;
         this.yloc = yloc;
+        adjacents = new ArrayList<Node>();
     }
 
-    public void marknode(int mark)
+    Node(Node oldnode){
+        this.xloc = oldnode.xloc;
+        this.yloc = oldnode.yloc;
+        adjacents = new ArrayList<Node>();
+        this.mark = oldnode.mark;
+    }
+
+    public void setmark(int mark)
     {
         this.mark = mark;
     }
 
-    public int requestmark()
+    public int getmark()
     {
         return mark;
+    }
+
+    public void setadjacent(Node adjnode) {
+        adjacents.add(adjnode);
+    }
+
+    public List getadjacentempty()
+    {
+        List newlist = new ArrayList<>();
+        for(Node adj : adjacents) {
+            //Node adj = (Node) element;
+            if (adj.getmark() == 0) {
+                newlist.add(adj);
+            }
+        }
+
+        return newlist;
     }
 }
